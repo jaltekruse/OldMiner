@@ -47,6 +47,8 @@ struct entity {
   float y;
   // movement direction - mouse only for now
   int dir;
+  // only for the thrown dynamite for now
+  float thrown_dist;
 };
 
 float angle = 0;
@@ -83,6 +85,8 @@ int entity_radius(int type) {
     case MOUSE1:
     case MOUSE_DIAMOND:
       return 5;
+    case DYNAMITE:
+      return 8;
   }
 }
 
@@ -127,18 +131,32 @@ int detect_collision(entity* e, int x, int y) {
          <= entity_radius(e->type);
 }
 
+// const int NUM_ENTITIES = 10;
+// entity entities[NUM_ENTITIES] = {
+//   {type: SMALL_ROCK, x: 20, y: 20},
+//   {type: BIG_GOLD, x: 10, y: 40},
+//   {type: BIG_GOLD, x: 50, y: 10},
+//   {type: SMALL_GOLD, x: 80, y: 50},
+//   {type: BIG_ROCK, x: 70, y: 20},
+//   {type: SMALL_ROCK, x: 60, y: 70},
+//   {type: DIAMOND, x: 50, y: 40},
+//   {type: SMALL_GOLD, x: 80, y: 20},
+//   {type: MOUSE1, x: 15, y: 15, dir: LEFT},
+//   {type: MOUSE_DIAMOND, x: 65, y: 45, dir: LEFT}
+// };
+
 const int NUM_ENTITIES = 10;
 entity entities[NUM_ENTITIES] = {
-  {type: SMALL_ROCK, x: 20, y: 20},
-  {type: BIG_GOLD, x: 10, y: 40},
-  {type: BIG_GOLD, x: 50, y: 10},
+  {type: SMALL_ROCK, x: 10, y: 50},
+  {type: BIG_GOLD, x: 20, y: 50},
+  {type: BIG_GOLD, x: 30, y: 50},
+  {type: SMALL_GOLD, x: 40, y: 50},
+  {type: BIG_ROCK, x: 50, y: 50},
+  {type: SMALL_ROCK, x: 60, y: 50},
+  {type: DIAMOND, x: 70, y: 50},
   {type: SMALL_GOLD, x: 80, y: 50},
-  {type: BIG_ROCK, x: 70, y: 20},
-  {type: SMALL_ROCK, x: 60, y: 70},
-  {type: DIAMOND, x: 50, y: 40},
-  {type: SMALL_GOLD, x: 80, y: 20},
-  {type: MOUSE1, x: 15, y: 15, dir: LEFT},
-  {type: MOUSE_DIAMOND, x: 65, y: 45, dir: LEFT}
+  {type: SMALL_GOLD, x: 90, y: 50},
+  {type: SMALL_GOLD, x: 110, y: 50}
 };
 
 // This function runs once in your game.
@@ -153,7 +171,7 @@ void setup() {
 
   // here we set the frame rate to 15, we do not need to run at
   // default 60 and it saves us battery life
-  arduboy.setFrameRate(60);
+  arduboy.setFrameRate(FPS);
 }
 
 float distance() {
@@ -176,7 +194,8 @@ void loop() {
   // (positions start at 0, 0)
   tinyfont.setCursor(0, 2);
   tinyfont.print("$ ");
-  tinyfont.print(money);
+  // tinyfont.print(money);
+  tinyfont.print(thrown_dynamite.thrown_dist);
 
   tinyfont.setCursor(80, 2);
   tinyfont.print("T ");
@@ -226,11 +245,6 @@ void loop() {
       array_pos_obj_in_claw = i;
       state = REELING_OBJ;
     }
-
-    if (state == REELING_OBJ && detect_collision(&thrown_dynamite, claw_x, claw_y)) {
-      entities[array_pos_obj_in_claw].type = NOTHING;
-      state = AIMING;
-    } 
   }
 
   arduboy.drawLine(64, 4, claw_x, claw_y, WHITE);
@@ -253,18 +267,8 @@ void loop() {
     }
   }
 
-  if (thrown_dynamite.type == DYNAMITE) {
-    Sprites::drawPlusMask(thrown_dynamite.x, thrown_dynamite.y, sprites_plus_mask, DYNAMITE);
-    thrown_dynamite.x += 0.2*sin(angle);
-    thrown_dynamite.y += 0.2*cos(angle);
-  }
-
   if (state == SHOOTING) {
     length += 2;
-    
-    if (arduboy.pressed(DOWN_BUTTON)) {
-      thrown_dynamite.type = DYNAMITE;
-    }
 
     if (claw_x < 0 ||
         claw_x > 128 ||
@@ -282,12 +286,34 @@ void loop() {
     }
   }
 
+  if (state == REELING_OBJ && thrown_dynamite.type == DYNAMITE) {
+    Sprites::drawPlusMask(thrown_dynamite.x, thrown_dynamite.y, sprites_plus_mask, DYNAMITE);
+    (&thrown_dynamite)->thrown_dist += .8*(time_left % 2 == 0 ? 1 : 0);
+    (&thrown_dynamite)->x = 64 - HALF_SPRITE + thrown_dynamite.thrown_dist*sin(angle);
+    (&thrown_dynamite)->y = -HALF_SPRITE + thrown_dynamite.thrown_dist*cos(angle);
+  }
+
+  if (state == REELING_OBJ && thrown_dynamite.type != NOTHING && detect_collision(&thrown_dynamite, claw_x, claw_y)) {
+      entities[array_pos_obj_in_claw].type = NOTHING;
+      thrown_dynamite.type = NOTHING;
+      state = AIMING;
+      length = 5;
+  } 
+
   if (state == REELING_OBJ) {
     obj_in_claw = &entities[array_pos_obj_in_claw];
     obj_in_claw->x = claw_x - HALF_SPRITE;
     obj_in_claw->y = claw_y - HALF_SPRITE;
 
     length -= 1.0 / entity_weight(obj_in_claw->type);
+
+    // can only throw dynamite when reeling in something
+    if (arduboy.pressed(UP_BUTTON) && thrown_dynamite.type == NOTHING) {
+      (&thrown_dynamite)->type = DYNAMITE;
+      (&thrown_dynamite)->thrown_dist = 0;
+      (&thrown_dynamite)->x = 64 - HALF_SPRITE;
+      (&thrown_dynamite)->y = -HALF_SPRITE;
+    }
     if (length < 5) {
       length = 5;
       angle = -PI/4;
