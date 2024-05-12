@@ -62,7 +62,7 @@ void setup() {
 
   // here we set the frame rate to 15, we do not need to run at
   // default 60 and it saves us battery life
-  arduboy.setFrameRate(15);
+  arduboy.setFrameRate(60);
 }
 
 
@@ -95,11 +95,11 @@ void loop() {
   if (state == AIMING) {
     // TODO - maybe add some acceleration, rather than constant change of angle
     if (arduboy.pressed(RIGHT_BUTTON)) {
-      angle += 0.05;
+      if (angle < PI/2) angle += 0.05;
     }
 
     if (arduboy.pressed(LEFT_BUTTON)) {
-      angle -= 0.05;
+      if (angle > -PI/2) angle -= 0.05;
     }
     if (arduboy.pressed(A_BUTTON)) {
       state = SHOOTING;
@@ -108,8 +108,10 @@ void loop() {
 
   if (state == SHOOTING) {
     length += 2;
-    // TODO - make this check for hitting edges of screen
-    if (length > 40) {
+
+    if (64 + length*sin(angle) < 0 ||
+        64 + length*sin(angle) > 128 ||
+        5 + length*cos(angle) > 64) {
       state = REELING_EMPTY;
     }
   }
