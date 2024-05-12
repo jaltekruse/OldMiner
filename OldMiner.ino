@@ -2,12 +2,6 @@
 Old Miner a clone of the flash game "Gold Minder"
 https://www.crazygames.com/game/gold-miner
 
-Hello, World! example
-June 11, 2015
-Copyright (C) 2015 David Martinez
-All rights reserved.
-This code is the most basic barebones code for writing a program for Arduboy.
-
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
 License as published by the Free Software Foundation; either
@@ -22,31 +16,6 @@ version 2.1 of the License, or (at your option) any later version.
 Arduboy2 arduboy;
 
 Tinyfont tinyfont = Tinyfont(arduboy.sBuffer, Arduboy2::width(), Arduboy2::height());
-
-struct entity {
-  int type;
-  int x;
-  int y;
-  // movement direction - mouse only for now
-  int dir;
-};
-
-float angle = 0;
-float length = 5;
-int claw_x;
-int claw_y;
-int money = 0;
-int dynamite_sticks = 0;
-
-const int FPS = 60;
-int time_left = 60 * FPS;
-
-int array_pos_obj_in_claw = -1;
-entity* obj_in_claw;
-
-const int LEFT = -1;
-const int RIGHT = 1;
-int direction = LEFT;
 
 const int DEBUG_CONTROLS = 0;
 
@@ -71,6 +40,34 @@ const int MOUSE_DIAMOND = 100;
 
 // currently all sprites are 16x16 and smaller things are just drawn in the center of that area
 const int HALF_SPRITE = 8;
+
+struct entity {
+  int type;
+  float x;
+  float y;
+  // movement direction - mouse only for now
+  int dir;
+};
+
+float angle = 0;
+float length = 5;
+int claw_x;
+int claw_y;
+int money = 0;
+int dynamite_sticks = 0;
+
+const int FPS = 60;
+int time_left = 60 * FPS;
+
+int array_pos_obj_in_claw = -1;
+entity* obj_in_claw;
+
+// updated to a real type when needed
+entity thrown_dynamite = {type: NOTHING};
+
+const int LEFT = -1;
+const int RIGHT = 1;
+int direction = LEFT;
 
 int entity_radius(int type) {
   switch(type){
@@ -130,7 +127,7 @@ int detect_collision(entity* e, int x, int y) {
          <= entity_radius(e->type);
 }
 
-const int NUM_ENTITIES = 9;
+const int NUM_ENTITIES = 10;
 entity entities[NUM_ENTITIES] = {
   {type: SMALL_ROCK, x: 20, y: 20},
   {type: BIG_GOLD, x: 10, y: 40},
@@ -141,7 +138,7 @@ entity entities[NUM_ENTITIES] = {
   {type: DIAMOND, x: 50, y: 40},
   {type: SMALL_GOLD, x: 80, y: 20},
   {type: MOUSE1, x: 15, y: 15, dir: LEFT},
-  {type: MOUSE_DIAMOND, x: 65, y: 15, dir: LEFT}
+  {type: MOUSE_DIAMOND, x: 65, y: 45, dir: LEFT}
 };
 
 // This function runs once in your game.
@@ -229,6 +226,11 @@ void loop() {
       array_pos_obj_in_claw = i;
       state = REELING_OBJ;
     }
+
+    if (state == REELING_OBJ && detect_collision(&thrown_dynamite, claw_x, claw_y)) {
+      entities[array_pos_obj_in_claw].type = NOTHING;
+      state = AIMING;
+    } 
   }
 
   arduboy.drawLine(64, 4, claw_x, claw_y, WHITE);
@@ -251,8 +253,18 @@ void loop() {
     }
   }
 
+  if (thrown_dynamite.type == DYNAMITE) {
+    Sprites::drawPlusMask(thrown_dynamite.x, thrown_dynamite.y, sprites_plus_mask, DYNAMITE);
+    thrown_dynamite.x += 0.2*sin(angle);
+    thrown_dynamite.y += 0.2*cos(angle);
+  }
+
   if (state == SHOOTING) {
     length += 2;
+    
+    if (arduboy.pressed(DOWN_BUTTON)) {
+      thrown_dynamite.type = DYNAMITE;
+    }
 
     if (claw_x < 0 ||
         claw_x > 128 ||
