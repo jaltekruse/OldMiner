@@ -25,10 +25,34 @@ float length = 5;
 
 const int AIMING = 1;
 const int SHOOTING = 2;
-const int REELING = 3;
+const int REELING_EMPTY = 3;
+const int REELING_OBJ = 4;
 int state = AIMING;
 
+// used as placeholder when somthing gets removed from scene
+const int NOTHING = -1;
+const int BIG_ROCK = 0;
+const int BIG_GOLD = 1;
+const int SMALL_ROCK = 2;
+const int SMALL_GOLD = 3;
+const int DIAMOND = 4;
+const int MOUSE1 = 5;
+const int MOUSE2 = 6;
+const int DYNAMITE = 7;
 
+struct entity {
+  int type;
+  int x;
+  int y;
+};
+
+const int NUM_ENTITIES = 4;
+entity entities[NUM_ENTITIES] = {
+  {type: SMALL_ROCK, x: 20, y: 20},
+  {type: BIG_GOLD, x: 10, y: 40},
+  {type: BIG_GOLD, x: 50, y: 10},
+  {type: SMALL_GOLD, x: 80, y: 50}
+};
 
 // This function runs once in your game.
 // use it for anything that needs to be set only once in your game.
@@ -59,7 +83,12 @@ void loop() {
   // then we print to screen what is in the Quotation marks ""
   //arduboy.print(F("Hello, world!"));
 
-  Sprites::drawOverwrite(20, 20, sprites, 0);
+  entity e;
+  for (int i = 0; i < NUM_ENTITIES; i++) {
+    e = entities[i];
+    if (e.type == NOTHING) continue;
+    Sprites::drawOverwrite(e.x, e.y, sprites, e.type);
+  }
 
   arduboy.drawLine(64, 4, 64 + length*sin(angle), 5 + length*cos(angle), WHITE);
 
@@ -79,12 +108,13 @@ void loop() {
 
   if (state == SHOOTING) {
     length += 2;
+    // TODO - make this check for hitting edges of screen
     if (length > 40) {
-      state = REELING;
+      state = REELING_EMPTY;
     }
   }
 
-    if (state == REELING) {
+    if (state == REELING_EMPTY) {
     length -= 1;
     if (length < 5) {
       length = 5;
