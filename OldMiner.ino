@@ -35,9 +35,9 @@ entity* obj_in_claw;
 
 const int LEFT = 1;
 const int RIGHT = 2;
-int direction = -1;
+int direction = LEFT;
 
-const int DEBUG_CONTROLS = 1;
+const int DEBUG_CONTROLS = 0;
 
 const int AIMING = 1;
 const int SHOOTING = 2;
@@ -82,12 +82,16 @@ int detect_collision(entity e, int x, int y) {
          <= entity_radius(e.type);
 }
 
-const int NUM_ENTITIES = 4;
+const int NUM_ENTITIES = 8;
 entity entities[NUM_ENTITIES] = {
   {type: SMALL_ROCK, x: 20, y: 20},
   {type: BIG_GOLD, x: 10, y: 40},
   {type: BIG_GOLD, x: 50, y: 10},
-  {type: SMALL_GOLD, x: 80, y: 50}
+  {type: SMALL_GOLD, x: 80, y: 50},
+  {type: BIG_ROCK, x: 50, y: 90},
+  {type: SMALL_ROCK, x: 70, y: 20},
+  {type: DIAMOND, x: 50, y: 40},
+  {type: SMALL_GOLD, x: 80, y: 20}
 };
 
 // This function runs once in your game.
@@ -97,8 +101,8 @@ void setup() {
   arduboy.begin();
 
   // TODO - this isn't working for me
-  //Serial.begin(9600);
-  //Serial.print("obj 3 type: ");
+  // Serial.begin(9600);
+  // Serial.print("obj 3 type: ");
 
   // here we set the frame rate to 15, we do not need to run at
   // default 60 and it saves us battery life
@@ -125,7 +129,7 @@ void loop() {
 
   // then we print to screen what is in the Quotation marks ""
   // arduboy.print(F("Hello, world!"));
-  // arduboy.print(entities[3].type);
+  // arduboy.println(entities[3].type);
 
   // debugging
   //Serial.println("obj 3 type: ");
@@ -190,7 +194,7 @@ void loop() {
     obj_in_claw->x = claw_x - HALF_SPRITE;
     obj_in_claw->y = claw_y - HALF_SPRITE;
 
-    length -= 1;
+    length -= 0.25;
     if (length < 5) {
       length = 5;
       angle = -PI/4;
