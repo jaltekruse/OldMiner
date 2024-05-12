@@ -23,6 +23,10 @@ Arduboy2 arduboy;
 float angle = 0;
 float length = 5;
 
+const int LEFT = 1;
+const int RIGHT = 2;
+int direction = LEFT;
+
 const int AIMING = 1;
 const int SHOOTING = 2;
 const int REELING_EMPTY = 3;
@@ -94,14 +98,16 @@ void loop() {
 
   if (state == AIMING) {
     // TODO - maybe add some acceleration, rather than constant change of angle
-    if (arduboy.pressed(RIGHT_BUTTON)) {
-      if (angle < PI/2) angle += 0.05;
+    if (direction == RIGHT) {
+      if (angle < PI/2) angle += 0.02;
+      else direction = LEFT;
     }
 
-    if (arduboy.pressed(LEFT_BUTTON)) {
-      if (angle > -PI/2) angle -= 0.05;
+    if (direction == LEFT) {
+      if (angle > -PI/2) angle -= 0.02;
+      else direction = RIGHT;
     }
-    if (arduboy.pressed(A_BUTTON)) {
+    if (arduboy.pressed(DOWN_BUTTON)) {
       state = SHOOTING;
     }
   }
@@ -120,6 +126,7 @@ void loop() {
     length -= 1;
     if (length < 5) {
       length = 5;
+      angle = -PI/4;
       state = AIMING;
     }
   }
