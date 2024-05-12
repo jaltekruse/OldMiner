@@ -131,8 +131,8 @@ entity entities[NUM_ENTITIES] = {
   {type: BIG_GOLD, x: 10, y: 40},
   {type: BIG_GOLD, x: 50, y: 10},
   {type: SMALL_GOLD, x: 80, y: 50},
-  {type: BIG_ROCK, x: 50, y: 90},
-  {type: SMALL_ROCK, x: 70, y: 20},
+  {type: BIG_ROCK, x: 70, y: 20},
+  {type: SMALL_ROCK, x: 60, y: 70},
   {type: DIAMOND, x: 50, y: 40},
   {type: SMALL_GOLD, x: 80, y: 20}
 };
