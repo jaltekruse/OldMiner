@@ -19,6 +19,15 @@ Tinyfont tinyfont = Tinyfont(arduboy.sBuffer, Arduboy2::width(), Arduboy2::heigh
 
 const int DEBUG_CONTROLS = 0;
 
+enum GameState {
+  TITLE,
+  STORY,
+  SHOP,
+  MINING
+};
+
+GameState game_state = TITLE;
+
 const int AIMING = 1;
 const int SHOOTING = 2;
 const int REELING_EMPTY = 3;
@@ -94,10 +103,10 @@ int entity_weight(int type) {
   switch(type){
     case BIG_ROCK:
     case BIG_GOLD:
-      return 20;
+      return 13;
     case SMALL_ROCK:
     case SMALL_GOLD:
-      return 8;
+      return 7;
     case DIAMOND:
       return 1;
     // TODO - refactor type vs sprite position in sheet to make animations work
@@ -178,24 +187,8 @@ float distance() {
   return 0;
 }
 
-// our main game loop, this runs once every cycle/frame.
-// this is where our game logic goes.
-void loop() {
-  // pause render until it's time for the next frame
-  if (!(arduboy.nextFrame()))
-    return;
-
+void game_loop() {
   time_left--;
-
-  // first we clear our screen to black
-  arduboy.clear();
-
-  // we set our cursor 5 pixels to the right and 10 down from the top
-  // (positions start at 0, 0)
-  tinyfont.setCursor(0, 2);
-  tinyfont.print("$ ");
-  // tinyfont.print(money);
-  tinyfont.print(thrown_dynamite.thrown_dist);
 
   tinyfont.setCursor(80, 2);
   tinyfont.print("T ");
@@ -214,9 +207,7 @@ void loop() {
 
   entity* e;
 
-  Sprites::drawPlusMask(35, -5, sprites_plus_mask, DYNAMITE);
-  tinyfont.setCursor(45, 2);
-  tinyfont.print(dynamite_sticks);
+  render_money();
 
   for (int i = 0; i < NUM_ENTITIES; i++) {
     e = &entities[i];
@@ -323,6 +314,66 @@ void loop() {
       state = AIMING;
     }
   }
+}
+
+void render_money() {
+
+  Sprites::drawPlusMask(35, -5, sprites_plus_mask, DYNAMITE);
+  tinyfont.setCursor(45, 2);
+  tinyfont.print(dynamite_sticks);
+
+  arduboy.setCursor(0, 0);
+  arduboy.print("$ ");
+  tinyfont.setCursor(7, 2);
+  tinyfont.print(money);
+}
+
+// our main game loop, this runs once every cycle/frame.
+// this is where our game logic goes.
+void loop() {
+  // pause render until it's time for the next frame
+  if (!(arduboy.nextFrame()))
+    return;
+
+  arduboy.pollButtons();
+
+  // first we clear our screen to black
+  arduboy.clear();
+  
+  switch(game_state) {
+    case TITLE:
+      arduboy.setCursor(30, 30);
+      arduboy.print("Old Miner");
+      arduboy.setCursor(30, 40);
+      arduboy.print("By Jason");
+      if (arduboy.justPressed(A_BUTTON)) {
+        game_state = STORY;
+      }
+      break;
+    case STORY:
+      arduboy.setCursor(0, 0);
+      arduboy.print("There's gold in them");
+      arduboy.setCursor(0, 10);
+      arduboy.print("hills! And you want");
+
+      arduboy.setCursor(0, 20);
+      arduboy.print("to strike it rich.");
+      arduboy.setCursor(0, 30);
+      arduboy.print("You need a permit");
+      arduboy.setCursor(0, 40);
+      arduboy.print("each day, and can't");
+      arduboy.setCursor(0, 50);
+      arduboy.print("end a day with debt.");
+
+      if (arduboy.justPressed(A_BUTTON)) {
+        game_state = MINING;
+      }
+      break;
+    case MINING:
+      game_loop();
+  }
+
+
 
   // then we finally we tell the arduboy to display what we just wrote to the display
   arduboy.display();
