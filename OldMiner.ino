@@ -15,10 +15,13 @@ version 2.1 of the License, or (at your option) any later version.
 */
 
 #include <Arduboy2.h>
+#include <Tinyfont.h>//830 PROGMEM - 28 RAM
 #include "sprites.h"
 
 // make an instance of arduboy used for many functions
 Arduboy2 arduboy;
+
+Tinyfont tinyfont = Tinyfont(arduboy.sBuffer, Arduboy2::width(), Arduboy2::height());
 
 struct entity {
   int type;
@@ -30,6 +33,12 @@ float angle = 0;
 float length = 5;
 int claw_x;
 int claw_y;
+int money = 0;
+int dynamite_sticks = 0;
+
+const int FPS = 60;
+int time_left = 60 * FPS;
+
 int array_pos_obj_in_claw = -1;
 entity* obj_in_claw;
 
@@ -70,6 +79,40 @@ int entity_radius(int type) {
       return 5;
     case DIAMOND:
       return 4;
+    // TODO - refactor type vs sprite position in sheet to make animations work
+    case MOUSE1:
+      return 5;
+  }
+}
+
+int entity_weight(int type) {
+  switch(type){
+    case BIG_ROCK:
+    case BIG_GOLD:
+      return 20;
+    case SMALL_ROCK:
+    case SMALL_GOLD:
+      return 8;
+    case DIAMOND:
+      return 1;
+    // TODO - refactor type vs sprite position in sheet to make animations work
+    case MOUSE1:
+      return 1;
+  }
+}
+
+int entity_value(int type) {
+  switch(type){
+    case BIG_ROCK:
+      return 10;
+    case BIG_GOLD:
+      return 500;
+    case SMALL_ROCK:
+      return 5;
+    case SMALL_GOLD:
+      return 100;
+    case DIAMOND:
+      return 1000;
     // TODO - refactor type vs sprite position in sheet to make animations work
     case MOUSE1:
       return 5;
@@ -120,12 +163,20 @@ void loop() {
   if (!(arduboy.nextFrame()))
     return;
 
+  time_left--;
+
   // first we clear our screen to black
   arduboy.clear();
 
   // we set our cursor 5 pixels to the right and 10 down from the top
   // (positions start at 0, 0)
-  arduboy.setCursor(4, 9);
+  tinyfont.setCursor(0, 2);
+  tinyfont.print("$ ");
+  tinyfont.print(money);
+
+  tinyfont.setCursor(80, 2);
+  tinyfont.print("T ");
+  tinyfont.print(time_left / 60);
 
   // then we print to screen what is in the Quotation marks ""
   // arduboy.print(F("Hello, world!"));
@@ -139,6 +190,11 @@ void loop() {
   claw_y = 5 + length*cos(angle);
 
   entity e;
+
+  Sprites::drawPlusMask(35, -5, sprites_plus_mask, DYNAMITE);
+  tinyfont.setCursor(45, 2);
+  tinyfont.print(dynamite_sticks);
+
   for (int i = 0; i < NUM_ENTITIES; i++) {
     e = entities[i];
     if (e.type == NOTHING) continue;
@@ -194,11 +250,12 @@ void loop() {
     obj_in_claw->x = claw_x - HALF_SPRITE;
     obj_in_claw->y = claw_y - HALF_SPRITE;
 
-    length -= 0.25;
+    length -= 1.0 / entity_weight(obj_in_claw->type);
     if (length < 5) {
       length = 5;
       angle = -PI/4;
-      entities[array_pos_obj_in_claw].type = NOTHING;
+      money += entity_value(obj_in_claw->type);
+      obj_in_claw->type = NOTHING;
       array_pos_obj_in_claw = -1;
       state = AIMING;
     }
