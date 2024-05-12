@@ -22,6 +22,8 @@ Arduboy2 arduboy;
 
 float angle = 0;
 float length = 5;
+int claw_x;
+int claw_y;
 
 const int LEFT = 1;
 const int RIGHT = 2;
@@ -43,6 +45,11 @@ const int DIAMOND = 4;
 const int MOUSE1 = 5;
 const int MOUSE2 = 6;
 const int DYNAMITE = 7;
+const int CLAW = 8;
+
+int entity_radius(int type) {
+
+}
 
 struct entity {
   int type;
@@ -69,6 +76,9 @@ void setup() {
   arduboy.setFrameRate(60);
 }
 
+float distance() {
+  return 0;
+}
 
 // our main game loop, this runs once every cycle/frame.
 // this is where our game logic goes.
@@ -87,14 +97,18 @@ void loop() {
   // then we print to screen what is in the Quotation marks ""
   //arduboy.print(F("Hello, world!"));
 
+  claw_x = 64 + length*sin(angle);
+  claw_y = 5 + length*cos(angle);
+
   entity e;
   for (int i = 0; i < NUM_ENTITIES; i++) {
     e = entities[i];
     if (e.type == NOTHING) continue;
     Sprites::drawOverwrite(e.x, e.y, sprites, e.type);
+
   }
 
-  arduboy.drawLine(64, 4, 64 + length*sin(angle), 5 + length*cos(angle), WHITE);
+  arduboy.drawLine(64, 4, claw_x, claw_y, WHITE);
 
   if (state == AIMING) {
     // TODO - maybe add some acceleration, rather than constant change of angle
@@ -115,9 +129,9 @@ void loop() {
   if (state == SHOOTING) {
     length += 2;
 
-    if (64 + length*sin(angle) < 0 ||
-        64 + length*sin(angle) > 128 ||
-        5 + length*cos(angle) > 64) {
+    if (claw_x < 0 ||
+        claw_x > 128 ||
+        claw_y > 64) {
       state = REELING_EMPTY;
     }
   }
