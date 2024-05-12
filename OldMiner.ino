@@ -27,6 +27,8 @@ struct entity {
   int type;
   int x;
   int y;
+  // movement direction - mouse only for now
+  int dir;
 };
 
 float angle = 0;
@@ -42,8 +44,8 @@ int time_left = 60 * FPS;
 int array_pos_obj_in_claw = -1;
 entity* obj_in_claw;
 
-const int LEFT = 1;
-const int RIGHT = 2;
+const int LEFT = -1;
+const int RIGHT = 1;
 int direction = LEFT;
 
 const int DEBUG_CONTROLS = 0;
@@ -119,13 +121,13 @@ int entity_value(int type) {
   }
 }
 
-int detect_collision(entity e, int x, int y) {
-  return sqrt(   (x-(e.x+HALF_SPRITE)) * (x-(e.x+HALF_SPRITE))
-               + (y-(e.y+HALF_SPRITE)) * (y-(e.y+HALF_SPRITE)))
-         <= entity_radius(e.type);
+int detect_collision(entity* e, int x, int y) {
+  return sqrt(   (x-(e->x+HALF_SPRITE)) * (x-(e->x+HALF_SPRITE))
+               + (y-(e->y+HALF_SPRITE)) * (y-(e->y+HALF_SPRITE)))
+         <= entity_radius(e->type);
 }
 
-const int NUM_ENTITIES = 8;
+const int NUM_ENTITIES = 9;
 entity entities[NUM_ENTITIES] = {
   {type: SMALL_ROCK, x: 20, y: 20},
   {type: BIG_GOLD, x: 10, y: 40},
@@ -134,7 +136,8 @@ entity entities[NUM_ENTITIES] = {
   {type: BIG_ROCK, x: 70, y: 20},
   {type: SMALL_ROCK, x: 60, y: 70},
   {type: DIAMOND, x: 50, y: 40},
-  {type: SMALL_GOLD, x: 80, y: 20}
+  {type: SMALL_GOLD, x: 80, y: 20},
+  {type: MOUSE1, x: 15, y: 15, dir: LEFT}
 };
 
 // This function runs once in your game.
@@ -189,18 +192,32 @@ void loop() {
   claw_x = 64 + length*sin(angle);
   claw_y = 5 + length*cos(angle);
 
-  entity e;
+  entity* e;
 
   Sprites::drawPlusMask(35, -5, sprites_plus_mask, DYNAMITE);
   tinyfont.setCursor(45, 2);
   tinyfont.print(dynamite_sticks);
 
   for (int i = 0; i < NUM_ENTITIES; i++) {
-    e = entities[i];
-    if (e.type == NOTHING) continue;
-    Sprites::drawPlusMask(e.x, e.y, sprites_plus_mask, e.type);
+    e = &entities[i];
+    if (e->type == NOTHING) continue;
 
-    if (detect_collision(e, claw_x, claw_y)) {
+    if (e->type == MOUSE1) {
+      // transition animation frames every 10 draw frames
+      Sprites::drawPlusMask(e->x, e->y, sprites_plus_mask, (time_left / 10) % 2 == 0 ? MOUSE1 : MOUSE2);
+
+      // keep running around unless currently being reeled in
+      if (array_pos_obj_in_claw != i) {
+        // only move a pixel every couple of frames
+        e->x += e->dir * (time_left % 3 == 0 ? 1 : 0);
+        // change movement direction when hitting the wall
+        if (e->x > 110 || e->x < 0) e->dir = -e->dir;
+      }
+    } else {
+      Sprites::drawPlusMask(e->x, e->y, sprites_plus_mask, e->type);
+    }
+
+    if (state == SHOOTING & detect_collision(e, claw_x, claw_y)) {
       array_pos_obj_in_claw = i;
       state = REELING_OBJ;
     }
