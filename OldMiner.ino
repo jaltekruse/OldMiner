@@ -67,6 +67,7 @@ const int MOUSE1 = 5;
 const int MOUSE2 = 6;
 const int DYNAMITE = 7;
 const int CLAW = 8;
+const int MOUSE_DIAMOND = 100;
 
 // currently all sprites are 16x16 and smaller things are just drawn in the center of that area
 const int HALF_SPRITE = 8;
@@ -83,6 +84,7 @@ int entity_radius(int type) {
       return 4;
     // TODO - refactor type vs sprite position in sheet to make animations work
     case MOUSE1:
+    case MOUSE_DIAMOND:
       return 5;
   }
 }
@@ -114,6 +116,7 @@ int entity_value(int type) {
     case SMALL_GOLD:
       return 100;
     case DIAMOND:
+    case MOUSE_DIAMOND:
       return 1000;
     // TODO - refactor type vs sprite position in sheet to make animations work
     case MOUSE1:
@@ -137,7 +140,8 @@ entity entities[NUM_ENTITIES] = {
   {type: SMALL_ROCK, x: 60, y: 70},
   {type: DIAMOND, x: 50, y: 40},
   {type: SMALL_GOLD, x: 80, y: 20},
-  {type: MOUSE1, x: 15, y: 15, dir: LEFT}
+  {type: MOUSE1, x: 15, y: 15, dir: LEFT},
+  {type: MOUSE_DIAMOND, x: 65, y: 15, dir: LEFT}
 };
 
 // This function runs once in your game.
@@ -202,9 +206,13 @@ void loop() {
     e = &entities[i];
     if (e->type == NOTHING) continue;
 
-    if (e->type == MOUSE1) {
+    if (e->type == MOUSE1 || e->type == MOUSE_DIAMOND) {
       // transition animation frames every 10 draw frames
       Sprites::drawPlusMask(e->x, e->y, sprites_plus_mask, (time_left / 10) % 2 == 0 ? MOUSE1 : MOUSE2);
+
+      if (e->type == MOUSE_DIAMOND) {
+        Sprites::drawPlusMask(e->x, e->y-5, sprites_plus_mask, DIAMOND);
+      }
 
       // keep running around unless currently being reeled in
       if (array_pos_obj_in_claw != i) {
