@@ -57,6 +57,9 @@ const int MOUSE2 = 6;
 const int DYNAMITE = 7;
 const int CLAW = 8;
 
+// currently all sprites are 16x16 and smaller things are just drawn in the center of that area
+const int HALF_SPRITE = 8;
+
 int entity_radius(int type) {
   switch(type){
     case BIG_ROCK:
@@ -74,10 +77,8 @@ int entity_radius(int type) {
 }
 
 int detect_collision(entity e, int x, int y) {
-  // currently all sprites are 16x16 and smaller things are just drawn in the center of that area
-  int half_sprite = 8;
-  return sqrt(   (x-e.x+half_sprite) * (x-e.x+half_sprite)
-               + (y-e.y+half_sprite) * (y-e.y+half_sprite))
+  return sqrt(   (x-(e.x+HALF_SPRITE)) * (x-(e.x+HALF_SPRITE))
+               + (y-(e.y+HALF_SPRITE)) * (y-(e.y+HALF_SPRITE)))
          <= entity_radius(e.type);
 }
 
@@ -94,6 +95,10 @@ entity entities[NUM_ENTITIES] = {
 void setup() {
   // initiate arduboy instance
   arduboy.begin();
+
+  // TODO - this isn't working for me
+  //Serial.begin(9600);
+  //Serial.print("obj 3 type: ");
 
   // here we set the frame rate to 15, we do not need to run at
   // default 60 and it saves us battery life
@@ -119,7 +124,12 @@ void loop() {
   arduboy.setCursor(4, 9);
 
   // then we print to screen what is in the Quotation marks ""
-  //arduboy.print(F("Hello, world!"));
+  // arduboy.print(F("Hello, world!"));
+  // arduboy.print(entities[3].type);
+
+  // debugging
+  //Serial.println("obj 3 type: ");
+  //Serial.println(entites[3].type);
 
   claw_x = 64 + length*sin(angle);
   claw_y = 5 + length*cos(angle);
@@ -128,7 +138,7 @@ void loop() {
   for (int i = 0; i < NUM_ENTITIES; i++) {
     e = entities[i];
     if (e.type == NOTHING) continue;
-    Sprites::drawOverwrite(e.x, e.y, sprites, e.type);
+    Sprites::drawPlusMask(e.x, e.y, sprites_plus_mask, e.type);
 
     if (detect_collision(e, claw_x, claw_y)) {
       array_pos_obj_in_claw = i;
@@ -177,13 +187,15 @@ void loop() {
 
   if (state == REELING_OBJ) {
     obj_in_claw = &entities[array_pos_obj_in_claw];
-    obj_in_claw->x = claw_x;
-    obj_in_claw->y = claw_y;
+    obj_in_claw->x = claw_x - HALF_SPRITE;
+    obj_in_claw->y = claw_y - HALF_SPRITE;
 
     length -= 1;
     if (length < 5) {
       length = 5;
       angle = -PI/4;
+      entities[array_pos_obj_in_claw].type = NOTHING;
+      array_pos_obj_in_claw = -1;
       state = AIMING;
     }
   }
