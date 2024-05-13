@@ -95,6 +95,7 @@ void reset_to_new_day() {
   direction = LEFT;
   array_pos_obj_in_claw = -1;
   time_left = 20 * FPS;
+  state = AIMING;
 }
 
 void reset_game() {
@@ -127,10 +128,10 @@ int entity_weight(int type) {
   switch(type){
     case BIG_ROCK:
     case BIG_GOLD:
-      return 13;
+      return 5;
     case SMALL_ROCK:
     case SMALL_GOLD:
-      return 7;
+      return 3;
     case DIAMOND:
       return 1;
     // TODO - refactor type vs sprite position in sheet to make animations work
@@ -415,8 +416,28 @@ void shop_loop() {
     shop_selection++;
   }
 
+  if (arduboy.justPressed(A_BUTTON) && items[shop_selection].type != START_DAY) {
+    if (items[shop_selection].price > 0) {
+      money -= items[shop_selection].price;
+      items[shop_selection].price = 0;
+      switch(items[shop_selection].type) {
+        case PERMIT:
+          ; // to nothing, there is logic below that will avlid re-buying the permit automatically
+            // on the start of the day
+          break;
+        case DYNAMITE_ITEM:
+          dynamite_sticks++;
+          break;
+      }
+    }
+  }
+
   if (arduboy.justPressed(A_BUTTON) && items[shop_selection].type == START_DAY) {
-    money -= items[0].price;
+    // if they didn't buy the permit, do it automatically
+    if (items[0].price) {
+      money -= items[0].price;
+    }
+
     reset_to_new_day();
     game_state = MINING;
 
@@ -426,10 +447,13 @@ void shop_loop() {
     for (int i = 0; i < NUM_ENTITIES; i++) {
       entities[i].x = random(5, 110);
       entities[i].y = random(20, 50);
-      entities[i].type = random(0, MOUSE_DIAMOND);
+      entities[i].type = random(0, MOUSE_DIAMOND + 1);
       // currently some things are coupled together poorly, dynamite and mouse2 aren't valid objects to put
       // on the screen, but they are in the sprite sheet
       if (entities[i].type == MOUSE2 || entities[i].type == DYNAMITE) entities[i].type = random(0, MOUSE1);
+
+      // these are only accessed when there is a mouse at a given slot in the array, so safe to unconditionally set it
+      entities[i].dir = LEFT;
     }
   }
 
