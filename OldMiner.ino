@@ -26,7 +26,8 @@ enum GameState {
   TITLE,
   STORY,
   SHOP,
-  MINING
+  MINING,
+  BANKRUPT
 };
 
 GameState game_state = TITLE;
@@ -47,8 +48,12 @@ const int DIAMOND = 4;
 const int MOUSE1 = 5;
 const int MOUSE2 = 6;
 const int DYNAMITE = 7;
+// TODO - fix up later, this isn't 8 in the sprite sheet
+// it is drawn from 2 different things
+const int MOUSE_DIAMOND = 8;
+
+// TODO - fix up, not used right now, but this is 8 in the sprite sheet
 const int CLAW = 8;
-const int MOUSE_DIAMOND = 100;
 
 // currently all sprites are 16x16 and smaller things are just drawn in the center of that area
 const int HALF_SPRITE = 8;
@@ -68,7 +73,8 @@ float length = 5;
 int claw_x;
 int claw_y;
 int money = 0;
-int dynamite_sticks = 0;
+int level = 1;
+int dynamite_sticks = 1;
 
 const int FPS = 60;
 int time_left = 60 * FPS;
@@ -82,6 +88,21 @@ entity thrown_dynamite = {type: NOTHING};
 const int LEFT = -1;
 const int RIGHT = 1;
 int direction = LEFT;
+
+void reset_to_new_day() {
+  angle = 0;
+  length = 5;
+  direction = LEFT;
+  array_pos_obj_in_claw = -1;
+  time_left = 20 * FPS;
+}
+
+void reset_game() {
+  reset_to_new_day();
+  level = 1;
+  money = 0;
+  dynamite_sticks = 1;
+}
 
 int entity_radius(int type) {
   switch(type){
@@ -130,11 +151,12 @@ int entity_value(int type) {
     case SMALL_GOLD:
       return 100;
     case DIAMOND:
+      return 600;
     case MOUSE_DIAMOND:
-      return 1000;
+      return 602;
     // TODO - refactor type vs sprite position in sheet to make animations work
     case MOUSE1:
-      return 5;
+      return 2;
   }
 }
 
@@ -194,7 +216,18 @@ float distance() {
 void game_loop() {
   time_left--;
 
-  tinyfont.setCursor(80, 2);
+  if (time_left < 0) {
+    if (money < 0)
+      game_state = BANKRUPT;
+    else {
+      level++;
+      init_shop();
+      game_state = SHOP;
+    }
+
+  }
+
+  tinyfont.setCursor(0, 2);
   tinyfont.print("T ");
   tinyfont.print(time_left / 60);
 
@@ -301,7 +334,8 @@ void game_loop() {
     length -= 1.0 / entity_weight(obj_in_claw->type);
 
     // can only throw dynamite when reeling in something
-    if (arduboy.pressed(UP_BUTTON) && thrown_dynamite.type == NOTHING) {
+    if (arduboy.pressed(UP_BUTTON) && dynamite_sticks > 0 && thrown_dynamite.type == NOTHING) {
+      dynamite_sticks--;
       (&thrown_dynamite)->type = DYNAMITE;
       (&thrown_dynamite)->thrown_dist = 0;
       (&thrown_dynamite)->x = 64 - HALF_SPRITE;
@@ -320,13 +354,13 @@ void game_loop() {
 
 void render_money() {
 
-  Sprites::drawPlusMask(35, -5, sprites_plus_mask, DYNAMITE);
-  tinyfont.setCursor(45, 2);
+  Sprites::drawPlusMask(72, -5, sprites_plus_mask, DYNAMITE);
+  tinyfont.setCursor(82, 2);
   tinyfont.print(dynamite_sticks);
 
-  arduboy.setCursor(0, 0);
+  arduboy.setCursor(90, 0);
   arduboy.print("$ ");
-  tinyfont.setCursor(7, 2);
+  tinyfont.setCursor(97, 2);
   tinyfont.print(money);
 }
 
@@ -347,32 +381,43 @@ struct Item {
   int price;
 };
 
-const int NUM_ITEMS = 4;
+const int NUM_ITEMS = 6;
 Item items[NUM_ITEMS] = {
   {type: PERMIT, price: 600},
   {type: DYNAMITE_ITEM, price: -1},
+  {type: NOTHING, price: -1},
+  {type: NOTHING, price: -1},
   {type: NOTHING, price: -1},
   {type: START_DAY, price: -1}
 };
 
 int shop_selection;
 
+void init_shop(){
+  shop_selection = 0;
+  items[0].price = 600 * pow(1.1, level);
+  if (level > 1) {
+    items[1].price = random( -50, 250);
+  }
+}
+
 void shop_loop() {
   render_money();
-  tinyfont.setCursor(0, 10);
+  tinyfont.setCursor(0, 0);
   tinyfont.print("Shop");
-  arduboy.drawLine(0, 16, 20, 16, WHITE);
+  arduboy.drawLine(0, 6, 20, 6, WHITE);
 
   if (arduboy.justPressed(UP_BUTTON) && shop_selection > 0) {
     shop_selection--;
   }
 
-  if (arduboy.justPressed(DOWN_BUTTON) && shop_selection < NUM_ITEMS) {
+  if (arduboy.justPressed(DOWN_BUTTON) && shop_selection < NUM_ITEMS - 1) {
     shop_selection++;
   }
 
   if (arduboy.justPressed(A_BUTTON) && items[shop_selection].type == START_DAY) {
     money -= items[0].price;
+    reset_to_new_day();
     game_state = MINING;
 
     entity* e;
@@ -381,6 +426,10 @@ void shop_loop() {
     for (int i = 0; i < NUM_ENTITIES; i++) {
       entities[i].x = random(5, 110);
       entities[i].y = random(20, 50);
+      entities[i].type = random(0, MOUSE_DIAMOND);
+      // currently some things are coupled together poorly, dynamite and mouse2 aren't valid objects to put
+      // on the screen, but they are in the sprite sheet
+      if (entities[i].type == MOUSE2 || entities[i].type == DYNAMITE) entities[i].type = random(0, MOUSE1);
     }
   }
 
@@ -388,7 +437,7 @@ void shop_loop() {
   Item* item;
 
   for (int i = 0; i < NUM_ITEMS; i++) {
-    int y_pos = 20 + SM_FONT_HEIGHT * i;
+    int y_pos = 9 + SM_FONT_HEIGHT * i;
     if (i == shop_selection) {
       int select_y = y_pos + SM_FONT_HEIGHT - 2;
       arduboy.drawLine(icon_width, select_y, 25, select_y, WHITE);
@@ -464,11 +513,28 @@ void loop() {
       arduboy.print("end a day with debt.");
 
       if (arduboy.justPressed(A_BUTTON)) {
+        init_shop();
         game_state = SHOP;
       }
       break;
     case SHOP:
       shop_loop();
+      break;
+    case BANKRUPT:
+      arduboy.setCursor(0, 0);
+      arduboy.print("You ended a day with");
+      arduboy.setCursor(0, 1 * FONT_HEIGHT);
+      arduboy.print("debt and had to");
+      arduboy.setCursor(0, 2 * FONT_HEIGHT);
+      arduboy.print("declare bankruptcy!");
+
+      arduboy.setCursor(0, 4 * FONT_HEIGHT);
+      arduboy.print("Play again?");
+
+      if (arduboy.justPressed(A_BUTTON)) {
+        reset_game();
+        game_state = TITLE;
+      }
       break;
     case MINING:
       game_loop();
