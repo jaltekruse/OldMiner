@@ -20,10 +20,18 @@ version 2.1 of the License, or (at your option) any later version.
 // make an instance of arduboy used for many functions
 Arduboy2 arduboy;
 
+struct entity {
+  int type;
+  int x;
+  int y;
+};
+
 float angle = 0;
 float length = 5;
 int claw_x;
 int claw_y;
+int array_pos_obj_in_claw = -1;
+entity obj_in_claw;
 
 const int LEFT = 1;
 const int RIGHT = 2;
@@ -48,14 +56,24 @@ const int DYNAMITE = 7;
 const int CLAW = 8;
 
 int entity_radius(int type) {
-
+  switch(type){
+    case BIG_ROCK:
+    case BIG_GOLD:
+      return 8;
+    case SMALL_ROCK:
+    case SMALL_GOLD:
+      return 5;
+    case DIAMOND:
+      return 4;
+    // TODO - refactor type vs sprite position in sheet to make animations work
+    case MOUSE1:
+      return 5;
+  }
 }
 
-struct entity {
-  int type;
-  int x;
-  int y;
-};
+int detect_collision(entity e, int x, int y) {
+  return sqrt( (x-e.x) * (x-e.x) + (y-e.y) * (y-e.y)) <= entity_radius(e.type);
+}
 
 const int NUM_ENTITIES = 4;
 entity entities[NUM_ENTITIES] = {
@@ -106,6 +124,10 @@ void loop() {
     if (e.type == NOTHING) continue;
     Sprites::drawOverwrite(e.x, e.y, sprites, e.type);
 
+    if (detect_collision(e, claw_x, claw_y)) {
+      array_pos_obj_in_claw = i;
+      state = REELING_OBJ;
+    }
   }
 
   arduboy.drawLine(64, 4, claw_x, claw_y, WHITE);
@@ -136,7 +158,20 @@ void loop() {
     }
   }
 
-    if (state == REELING_EMPTY) {
+  if (state == REELING_EMPTY) {
+    length -= 1;
+    if (length < 5) {
+      length = 5;
+      angle = -PI/4;
+      state = AIMING;
+    }
+  }
+
+  if (state == REELING_OBJ) {
+    obj_in_claw = entities[array_pos_obj_in_claw];
+    obj_in_claw.x = claw_x;
+    obj_in_claw.y = claw_y;
+
     length -= 1;
     if (length < 5) {
       length = 5;
