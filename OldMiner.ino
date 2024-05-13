@@ -31,11 +31,13 @@ float length = 5;
 int claw_x;
 int claw_y;
 int array_pos_obj_in_claw = -1;
-entity obj_in_claw;
+entity* obj_in_claw;
 
 const int LEFT = 1;
 const int RIGHT = 2;
-int direction = LEFT;
+int direction = -1;
+
+const int DEBUG_CONTROLS = 1;
 
 const int AIMING = 1;
 const int SHOOTING = 2;
@@ -72,7 +74,11 @@ int entity_radius(int type) {
 }
 
 int detect_collision(entity e, int x, int y) {
-  return sqrt( (x-e.x) * (x-e.x) + (y-e.y) * (y-e.y)) <= entity_radius(e.type);
+  // currently all sprites are 16x16 and smaller things are just drawn in the center of that area
+  int half_sprite = 8;
+  return sqrt(   (x-e.x+half_sprite) * (x-e.x+half_sprite)
+               + (y-e.y+half_sprite) * (y-e.y+half_sprite))
+         <= entity_radius(e.type);
 }
 
 const int NUM_ENTITIES = 4;
@@ -134,14 +140,16 @@ void loop() {
 
   if (state == AIMING) {
     // TODO - maybe add some acceleration, rather than constant change of angle
-    if (direction == RIGHT) {
+    if (direction == RIGHT ||
+        (DEBUG_CONTROLS && arduboy.pressed(RIGHT_BUTTON))) {
       if (angle < PI/2) angle += 0.02;
-      else direction = LEFT;
+      else if (!DEBUG_CONTROLS) direction = LEFT;
     }
 
-    if (direction == LEFT) {
+    if (direction == LEFT ||
+        (DEBUG_CONTROLS && arduboy.pressed(LEFT_BUTTON))) {
       if (angle > -PI/2) angle -= 0.02;
-      else direction = RIGHT;
+      else if (!DEBUG_CONTROLS) direction = RIGHT;
     }
     if (arduboy.pressed(DOWN_BUTTON)) {
       state = SHOOTING;
@@ -168,9 +176,9 @@ void loop() {
   }
 
   if (state == REELING_OBJ) {
-    obj_in_claw = entities[array_pos_obj_in_claw];
-    obj_in_claw.x = claw_x;
-    obj_in_claw.y = claw_y;
+    obj_in_claw = &entities[array_pos_obj_in_claw];
+    obj_in_claw->x = claw_x;
+    obj_in_claw->y = claw_y;
 
     length -= 1;
     if (length < 5) {
