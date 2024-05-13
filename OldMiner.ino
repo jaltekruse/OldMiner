@@ -17,6 +17,9 @@ Arduboy2 arduboy;
 
 Tinyfont tinyfont = Tinyfont(arduboy.sBuffer, Arduboy2::width(), Arduboy2::height());
 
+const int FONT_HEIGHT = 10;
+const int SM_FONT_HEIGHT = 8;
+
 const int DEBUG_CONTROLS = 0;
 
 enum GameState {
@@ -140,33 +143,33 @@ int detect_collision(entity* e, int x, int y) {
          <= entity_radius(e->type);
 }
 
-// const int NUM_ENTITIES = 10;
-// entity entities[NUM_ENTITIES] = {
-//   {type: SMALL_ROCK, x: 20, y: 20},
-//   {type: BIG_GOLD, x: 10, y: 40},
-//   {type: BIG_GOLD, x: 50, y: 10},
-//   {type: SMALL_GOLD, x: 80, y: 50},
-//   {type: BIG_ROCK, x: 70, y: 20},
-//   {type: SMALL_ROCK, x: 60, y: 70},
-//   {type: DIAMOND, x: 50, y: 40},
-//   {type: SMALL_GOLD, x: 80, y: 20},
-//   {type: MOUSE1, x: 15, y: 15, dir: LEFT},
-//   {type: MOUSE_DIAMOND, x: 65, y: 45, dir: LEFT}
-// };
-
 const int NUM_ENTITIES = 10;
 entity entities[NUM_ENTITIES] = {
-  {type: SMALL_ROCK, x: 10, y: 50},
-  {type: BIG_GOLD, x: 20, y: 50},
-  {type: BIG_GOLD, x: 30, y: 50},
-  {type: SMALL_GOLD, x: 40, y: 50},
-  {type: BIG_ROCK, x: 50, y: 50},
-  {type: SMALL_ROCK, x: 60, y: 50},
-  {type: DIAMOND, x: 70, y: 50},
+  {type: SMALL_ROCK, x: 20, y: 20},
+  {type: BIG_GOLD, x: 10, y: 40},
+  {type: BIG_GOLD, x: 50, y: 10},
   {type: SMALL_GOLD, x: 80, y: 50},
-  {type: SMALL_GOLD, x: 90, y: 50},
-  {type: SMALL_GOLD, x: 110, y: 50}
+  {type: BIG_ROCK, x: 70, y: 20},
+  {type: SMALL_ROCK, x: 60, y: 70},
+  {type: DIAMOND, x: 50, y: 40},
+  {type: SMALL_GOLD, x: 80, y: 20},
+  {type: MOUSE1, x: 15, y: 15, dir: LEFT},
+  {type: MOUSE_DIAMOND, x: 65, y: 45, dir: LEFT}
 };
+
+// const int NUM_ENTITIES = 10;
+// entity entities[NUM_ENTITIES] = {
+//   {type: SMALL_ROCK, x: 10, y: 50},
+//   {type: BIG_GOLD, x: 20, y: 50},
+//   {type: BIG_GOLD, x: 30, y: 50},
+//   {type: SMALL_GOLD, x: 40, y: 50},
+//   {type: BIG_ROCK, x: 50, y: 50},
+//   {type: SMALL_ROCK, x: 60, y: 50},
+//   {type: DIAMOND, x: 70, y: 50},
+//   {type: SMALL_GOLD, x: 80, y: 50},
+//   {type: SMALL_GOLD, x: 90, y: 50},
+//   {type: SMALL_GOLD, x: 110, y: 50}
+// };
 
 // This function runs once in your game.
 // use it for anything that needs to be set only once in your game.
@@ -328,6 +331,98 @@ void render_money() {
   tinyfont.print(money);
 }
 
+// shop state
+enum ItemType {
+  // Used as array terminator
+  NADA,
+  PERMIT,
+  DYNAMITE_ITEM,
+  DIAMOND_POLISH,
+  LUCKY_CLOVER,
+  STRENGTH_DRINK,
+  START_DAY
+};
+
+struct Item {
+  ItemType type;
+  int price;
+};
+
+const int NUM_ITEMS = 4;
+Item items[NUM_ITEMS] = {
+  {type: PERMIT, price: 600},
+  {type: DYNAMITE_ITEM, price: -1},
+  {type: NOTHING, price: -1},
+  {type: START_DAY, price: -1}
+};
+
+int shop_selection;
+
+void shop_loop() {
+  render_money();
+  tinyfont.setCursor(0, 10);
+  tinyfont.print("Shop");
+  arduboy.drawLine(0, 16, 20, 16, WHITE);
+
+  if (arduboy.justPressed(UP_BUTTON) && shop_selection > 0) {
+    shop_selection--;
+  }
+
+  if (arduboy.justPressed(DOWN_BUTTON) && shop_selection < NUM_ITEMS) {
+    shop_selection++;
+  }
+
+  if (arduboy.justPressed(A_BUTTON) && items[shop_selection].type == START_DAY) {
+    money -= items[0].price;
+    game_state = MINING;
+
+    // Randomize item locations
+    for (int i = 0; i < NUM_ENTITIES; i++) {
+      e = &entities[i];
+  }
+
+  int icon_width = 8;
+  Item* item;
+
+  for (int i = 0; i < NUM_ITEMS; i++) {
+    int y_pos = 20 + SM_FONT_HEIGHT * i;
+    if (i == shop_selection) {
+      int select_y = y_pos + SM_FONT_HEIGHT - 2;
+      arduboy.drawLine(icon_width, select_y, 25, select_y, WHITE);
+    }
+
+    item = &items[i];
+    if (item->type == NOTHING) continue;
+
+    int price = item->price;
+    if (item->type == DYNAMITE_ITEM) {
+      Sprites::drawPlusMask(0 - 4, y_pos - 6, sprites_plus_mask, DYNAMITE);
+    }
+    tinyfont.setCursor(icon_width, y_pos);
+    switch(item->type) {
+      case PERMIT:
+        tinyfont.print("Permit: Required");
+        break;
+      case START_DAY:
+        tinyfont.print("Start Mining");
+        continue;
+        break;
+      case DYNAMITE_ITEM:
+        if (price < 0)
+          tinyfont.print("Dynamite: Sold out");
+        else
+          tinyfont.print("Dynamite");
+        break;
+    }
+
+    tinyfont.setCursor(128 - 3 * icon_width, y_pos);
+    if (price > 0)
+      tinyfont.print(price);
+    else
+      tinyfont.print("-");
+  }
+}
+
 // our main game loop, this runs once every cycle/frame.
 // this is where our game logic goes.
 void loop() {
@@ -342,9 +437,9 @@ void loop() {
   
   switch(game_state) {
     case TITLE:
-      arduboy.setCursor(30, 30);
+      arduboy.setCursor(30, 3 * FONT_HEIGHT);
       arduboy.print("Old Miner");
-      arduboy.setCursor(30, 40);
+      arduboy.setCursor(30, 4 * FONT_HEIGHT);
       arduboy.print("By Jason");
       if (arduboy.justPressed(A_BUTTON)) {
         game_state = STORY;
@@ -353,27 +448,28 @@ void loop() {
     case STORY:
       arduboy.setCursor(0, 0);
       arduboy.print("There's gold in them");
-      arduboy.setCursor(0, 10);
+      arduboy.setCursor(0, 1 * FONT_HEIGHT);
       arduboy.print("hills! And you want");
 
-      arduboy.setCursor(0, 20);
+      arduboy.setCursor(0, 2 * FONT_HEIGHT);
       arduboy.print("to strike it rich.");
-      arduboy.setCursor(0, 30);
+      arduboy.setCursor(0, 3 * FONT_HEIGHT);
       arduboy.print("You need a permit");
-      arduboy.setCursor(0, 40);
+      arduboy.setCursor(0, 4 * FONT_HEIGHT);
       arduboy.print("each day, and can't");
-      arduboy.setCursor(0, 50);
+      arduboy.setCursor(0, 5 * FONT_HEIGHT);
       arduboy.print("end a day with debt.");
 
       if (arduboy.justPressed(A_BUTTON)) {
-        game_state = MINING;
+        game_state = SHOP;
       }
+      break;
+    case SHOP:
+      shop_loop();
       break;
     case MINING:
       game_loop();
   }
-
-
 
   // then we finally we tell the arduboy to display what we just wrote to the display
   arduboy.display();
