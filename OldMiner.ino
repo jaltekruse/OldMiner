@@ -114,6 +114,7 @@ int entity_weight(int type) {
       return 1;
     // TODO - refactor type vs sprite position in sheet to make animations work
     case MOUSE1:
+    case MOUSE_DIAMOND:
       return 1;
   }
 }
@@ -207,11 +208,9 @@ void game_loop() {
 
   claw_x = 64 + length*sin(angle);
   claw_y = 5 + length*cos(angle);
-
-  entity* e;
-
   render_money();
 
+  entity* e;
   for (int i = 0; i < NUM_ENTITIES; i++) {
     e = &entities[i];
     if (e->type == NOTHING) continue;
@@ -376,9 +375,13 @@ void shop_loop() {
     money -= items[0].price;
     game_state = MINING;
 
+    entity* e;
+    arduboy.initRandomSeed();
     // Randomize item locations
     for (int i = 0; i < NUM_ENTITIES; i++) {
-      e = &entities[i];
+      entities[i].x = random(5, 110);
+      entities[i].y = random(20, 50);
+    }
   }
 
   int icon_width = 8;
