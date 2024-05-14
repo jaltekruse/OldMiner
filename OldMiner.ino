@@ -96,6 +96,8 @@ void reset_to_new_day() {
   array_pos_obj_in_claw = -1;
   time_left = 20 * FPS;
   state = AIMING;
+  thrown_dynamite.type = NOTHING;
+
 }
 
 void reset_game() {
@@ -315,9 +317,9 @@ void game_loop() {
 
   if (state == REELING_OBJ && thrown_dynamite.type == DYNAMITE) {
     Sprites::drawPlusMask(thrown_dynamite.x, thrown_dynamite.y, sprites_plus_mask, DYNAMITE);
-    (&thrown_dynamite)->thrown_dist += .8*(time_left % 2 == 0 ? 1 : 0);
-    (&thrown_dynamite)->x = 64 - HALF_SPRITE + thrown_dynamite.thrown_dist*sin(angle);
-    (&thrown_dynamite)->y = -HALF_SPRITE + thrown_dynamite.thrown_dist*cos(angle);
+    thrown_dynamite.thrown_dist += .8*(time_left % 2 == 0 ? 1 : 0);
+    thrown_dynamite.x = 64 - HALF_SPRITE + thrown_dynamite.thrown_dist*sin(angle);
+    thrown_dynamite.y = -HALF_SPRITE + thrown_dynamite.thrown_dist*cos(angle);
   }
 
   if (state == REELING_OBJ && thrown_dynamite.type != NOTHING && detect_collision(&thrown_dynamite, claw_x, claw_y)) {
@@ -337,10 +339,10 @@ void game_loop() {
     // can only throw dynamite when reeling in something
     if (arduboy.pressed(UP_BUTTON) && dynamite_sticks > 0 && thrown_dynamite.type == NOTHING) {
       dynamite_sticks--;
-      (&thrown_dynamite)->type = DYNAMITE;
-      (&thrown_dynamite)->thrown_dist = 0;
-      (&thrown_dynamite)->x = 64 - HALF_SPRITE;
-      (&thrown_dynamite)->y = -HALF_SPRITE;
+      thrown_dynamite.type = DYNAMITE;
+      thrown_dynamite.thrown_dist = 0;
+      thrown_dynamite.x = 64 - HALF_SPRITE;
+      thrown_dynamite.y = -HALF_SPRITE;
     }
     if (length < 5) {
       length = 5;
