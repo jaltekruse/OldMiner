@@ -63,8 +63,8 @@ class Sprite {
     void set_xy (int x,int y);
     void set_width_height(int width, int height);
     int area() {return width*height;}
-    void leftArrow() {}
-    void rightArrow() {}
+    virtual void leftArrow() {}
+    virtual void rightArrow() {}
 };
 
 class Sprite1 : public Sprite {
@@ -84,16 +84,17 @@ class Sprite1 : public Sprite {
       };
     }
     void leftArrow() {
-      x += 5;
+      x -= 5;
     }
     void rightArrow() {
       x += 5;
     }
 };
 
+Sprite1 sprite1 = Sprite1(50,50);
 const int NUM_SPRITES = 1;
-Sprite sprites[NUM_SPRITES] = {
-  Sprite1(50, 50)
+Sprite* sprites[NUM_SPRITES] = {
+  &sprite1
 };
 
 
@@ -185,18 +186,23 @@ void game_loop() {
 
   Sprite* s;
   for (int i = 0; i < NUM_SPRITES; i++) {
-    s = &sprites[i];
+    s = sprites[i];
     Sprites::drawPlusMask(s->x, s->y, sprites_plus_mask, SMALL_ROCK);
   }
 
   if (arduboy.pressed(RIGHT_BUTTON)) {
-    Sprite1* s;
+    Sprite* s;
     for (int i = 0; i < NUM_SPRITES; i++) {
-      s = (Sprite1*) &sprites[i];
+      s = sprites[i];
       s->rightArrow();
     }
   }
   if (arduboy.pressed(LEFT_BUTTON)) {
+    Sprite* s;
+    for (int i = 0; i < NUM_SPRITES; i++) {
+      s = sprites[i];
+      s->leftArrow();
+    }
   }
   if (arduboy.pressed(DOWN_BUTTON)) {
   }
